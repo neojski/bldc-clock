@@ -14,7 +14,7 @@ void doB(){encoder.handleB();}
 Commander command = Commander(Serial);
 void onTarget(char* cmd){ command.motion(&motor, cmd); }
 
-
+MagneticSensorI2C sensor = MagneticSensorI2C(0x36, 12, 0x0E, 4);
 
 void setup() {
 
@@ -64,7 +64,9 @@ void setup() {
   motor.initFOC();
 
   // add target command T
-  command.add('T', onTarget, "motion control");
+  //command.add('T', onTarget, "motion control");
+
+  sensor.init();
 
   // monitoring port
   Serial.begin(115200);
@@ -80,7 +82,7 @@ void loop() {
 
   float target = (float)millis() / 1000.0 / 60.0 * 3.14;
 
-  Serial.print(target);
+  //Serial.print(target);
 
   // function calculating the outer position loop and setting the target position 
   motor.move(target);
@@ -88,4 +90,8 @@ void loop() {
   // commander interface with the user
   //command.run();
 
+  sensor.update();
+  Serial.print(sensor.getAngle());
+  Serial.print("\n");
+  
 }
