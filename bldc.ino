@@ -3,7 +3,7 @@
 // SDA & SLC to a4 & a5
 
 // init BLDC motor
-BLDCMotor motor = BLDCMotor( 11 );
+BLDCMotor motor = BLDCMotor( 7 );
 // init driver
 BLDCDriver3PWM driver = BLDCDriver3PWM(11, 10, 9, 8);
 
@@ -13,9 +13,11 @@ void onTarget(char* cmd){ command.motion(&motor, cmd); }
 
 MagneticSensorI2C sensor = MagneticSensorI2C(AS5600_I2C);
 
+void doMotor(char* cmd) { command.motor(&motor, cmd); }
+
 void setup() {
   Serial.begin(115200);
-  SimpleFOCDebug::enable(&Serial);
+  //SimpleFOCDebug::enable(&Serial);
  
   // is this set clock needed?
   //Wire.setClock(400000);
@@ -34,16 +36,13 @@ void setup() {
   motor.linkDriver(&driver);
 
   // set control loop to be used
-  motor.controller = MotionControlType::velocity; // XXX: openloop
-  
+  motor.controller = MotionControlType::angle;
+
   // controller configuration based on the control type 
   // velocity PI controller parameters
   // default P=0.5 I = 10
   motor.PID_velocity.P = 0.1;
-  motor.PID_velocity.I = 0;
-  motor.PID_velocity.D = 0;
-
-  //motor.sensor_direction = Direction::CCW;
+  motor.PID_velocity.I = 0.05;
   
   //default voltage_power_supply
   motor.voltage_limit = 12;
@@ -55,23 +54,24 @@ void setup() {
 
   // angle P controller 
   // default P=20
-  motor.P_angle.P = 2;
+  motor.P_angle.P = 20;
   //  maximal velocity of the position control
   // default 20
-  motor.velocity_limit = 4;
+  motor.velocity_limit = 20;
+
+  motor.useMonitoring(Serial);
   
   // initialize motor
   motor.init();
   // align encoder and start FOC
   motor.initFOC();
 
-  // add target command T
-  //command.add('T', onTarget, "motion control");
-
+  command.add('M',doMotor,'motor');
+  
 
   // monitoring port
-  Serial.println("Motor ready.");
-  Serial.println("Set the target angle using serial terminal:");
+  //Serial.println("Motor ready.");
+  //Serial.println("Set the target angle using serial terminal:");
   _delay(1000);
 }
 
@@ -84,9 +84,10 @@ void loop() {
   //float target = (float)millis() / 1000.0 / 60.0 * 3.14;
   float target = 0.;
 
+  command.run();
 
   //sensor.update();
-  if (i % 100 == 0) {
+ /* if (i % 100 == 0) {
     Serial.print(target);
     Serial.print("\t");
 
@@ -99,8 +100,8 @@ void loop() {
 
     }
   i++;
-
-
+*/
+  motor.monitor();
   motor.move(1);
   
 
