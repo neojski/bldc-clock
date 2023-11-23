@@ -1,10 +1,9 @@
 #include <SimpleFOC.h>
+#define PI 3.14159265358979323846
 
 // SDA & SLC to a4 & a5
 
-// init BLDC motor
 BLDCMotor motor = BLDCMotor( 7 );
-// init driver
 BLDCDriver3PWM driver = BLDCDriver3PWM(11, 10, 9, 8);
 
 // commander interface
@@ -75,38 +74,31 @@ void setup() {
   _delay(1000);
 }
 
+float radToDeg(float rad){ 
+  return rad / 2 / PI * 360;
+}
 
-int i = 0;
+float degToRad(float deg) {
+  return deg * 2 * PI / 360;
+}
+
+float target = 0;
 void loop() {
   // iterative FOC function
   motor.loopFOC();
-
-  //float target = (float)millis() / 1000.0 / 60.0 * 3.14;
-  float target = 0.;
-
-  command.run();
-
-  //sensor.update();
- /* if (i % 100 == 0) {
-    Serial.print(target);
-    Serial.print("\t");
-
-    Serial.print(sensor.getFullRotations());
-    Serial.print("\t");
   
-    Serial.print(sensor.getAngle() / 3.14 / 2 * 360.);
-    Serial.print("\n");
-
-
-    }
-  i++;
-*/
-  motor.monitor();
-  motor.move(1);
-  
-
-  // commander interface with the user
   //command.run();
+
+  target = degToRad((float)millis() / 1000.0 / 60 * 360);
+
+  Serial.print("angle: ");
+  Serial.print(radToDeg(sensor.getAngle()));
+  Serial.print("\t");
   
-  //delayMicroseconds(1000); 
+  Serial.print("target: ");
+  Serial.print(radToDeg(target));
+  Serial.print("\n");
+
+  //motor.monitor();
+  motor.move(target);
 }
