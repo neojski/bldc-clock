@@ -89,7 +89,15 @@ void loop() {
   
   //command.run();
 
-  target = degToRad((float)millis() / 1000.0 / 60 * 360);
+  int sec = (float)millis() / 1000.0;
+
+  if (sec % 2 == 0){
+    target = degToRad(10);
+  } else {
+    target = degToRad(-10);
+  }
+
+  //target = degToRad((float)sec / 60 * 360);
 
   Serial.print("angle: ");
   Serial.print(radToDeg(sensor.getAngle()));
