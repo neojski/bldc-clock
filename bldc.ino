@@ -80,16 +80,19 @@ void setup() {
 }
 
 float radToDeg(float rad){ 
-  return rad / 2 / PI * 360;
+  return rad / 2.0 / PI * 360.0;
 }
 
 float degToRad(float deg) {
-  return deg * 2 * PI / 360;
+  return deg * 2.0 * PI / 360.0;
 }
 
 float targetAngle;
-void setAngle(float targetAngle0) {
-  targetAngle = targetAngle0;
+void setAngleRad(float rad) {
+  targetAngle = rad;
+}
+void setAngleDeg(float deg) {
+  setAngleRad(degToRad(deg));
 }
 
 void updateTorque() {
@@ -107,41 +110,67 @@ int getSeconds() {
   return (float)millis() / 1000.0;
 }
 
-void seconds () {
-  int sec = getSeconds();
-  setAngle(degToRad(sec * 360 / 60));
+void setAngleSeconds(int sec) {
+  setAngleDeg(sec * 360 / 60);
+}
+
+void seconds (int dir) {
+  int sec = dir * getSeconds();
+  setAngleSeconds(sec);
 }
 
 void pendulum() {
   float angle = 40 * cos(millis() / 1000. * PI);
-  setAngle(degToRad(angle));
+  setAngleDeg(angle);
 }
 
-int maxProgram = 2;
-int switchTime = 5000; // ms
+void forwardAndBack() {
+  int multiSec = (float) (4 * millis()) / 1000.0;
+  Serial.println(multiSec);
+  int c = multiSec % 4;
+  if (c == 0 || c == 2) {
+    setAngleSeconds(multiSec / 4);
+  } else if (c == 1) {
+    setAngleSeconds(multiSec / 4 + 1);
+  }
+}
 
-int program = 1;
+int maxProgram = 4;
+int switchTime = 3000; // ms
+
+int program = 3;
 float lastSwitchTime = millis();
 int getProgram() {
   float now = millis();
   if (now - lastSwitchTime > switchTime) {
-    program = (program + 1) % maxProgram;
-    lastSwitchTime = now;
+    // next program if force moved by more than 45 degress
+    if (abs(targetAngle - sensor.getAngle()) > degToRad(45)) {
+      program = (program + 1) % maxProgram;
+      Serial.print("Program");
+      Serial.print(program);
+      Serial.println();
+      lastSwitchTime = now;
+    }
   }
   return program;
 }
 
-float target = 0;
 void loop() {
   motor.loopFOC();
   command.run();
 
   switch (getProgram()) {
     case 0:
-      seconds();
+      seconds(1);
       break;
     case 1:
+      seconds(-1);
+      break;
+    case 2:
       pendulum();
+      break;
+    case 3:
+      forwardAndBack();
       break;
   }
 
