@@ -110,7 +110,7 @@ int getSeconds() {
   return (float)millis() / 1000.0;
 }
 
-void setAngleSeconds(int sec) {
+void setAngleSeconds(float sec) {
   setAngleDeg(sec * 360 / 60);
 }
 
@@ -126,7 +126,6 @@ void pendulum() {
 
 void forwardAndBack() {
   int multiSec = (float) (4 * millis()) / 1000.0;
-  Serial.println(multiSec);
   int c = multiSec % 4;
   if (c == 0 || c == 2) {
     setAngleSeconds(multiSec / 4);
@@ -135,7 +134,12 @@ void forwardAndBack() {
   }
 }
 
-int maxProgram = 4;
+void smoothSeconds() {
+  float sec = millis() / 1000.;
+  setAngleSeconds(sec);
+}
+
+int maxProgram = 5;
 int switchTime = 3000; // ms
 
 int program = 3;
@@ -171,6 +175,9 @@ void loop() {
       break;
     case 3:
       forwardAndBack();
+      break;
+    case 4:
+      smoothSeconds();
       break;
   }
 
