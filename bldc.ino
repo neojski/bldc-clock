@@ -103,6 +103,7 @@ void updateTorque() {
 }
 
 int getSeconds() {
+  // TODO: maybe use fmodf
   return (float)millis() / 1000.0;
 }
 
