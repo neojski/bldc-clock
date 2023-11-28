@@ -107,16 +107,13 @@ int getSeconds() {
   return (float)millis() / 1000.0;
 }
 
-// seconds
 void seconds () {
   int sec = getSeconds();
   setAngle(degToRad(sec * 360 / 60));
 }
 
-// tick-tock
-void tick() {
+void pendulum() {
   float angle = 40 * cos(millis() / 1000. * PI);
-  Serial.println(angle); 
   setAngle(degToRad(angle));
 }
 
@@ -144,7 +141,7 @@ void loop() {
       seconds();
       break;
     case 1:
-      tick();
+      pendulum();
       break;
   }
 
