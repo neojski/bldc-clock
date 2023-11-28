@@ -2,14 +2,15 @@
 #define PI 3.14159265358979323846
 
 // SDA & SLC to a4 & a5
+// Useful commands:
+// MVD0 - set velocity derivative to 0
+// MVP1 - set velocity p to 1
 
 BLDCMotor motor = BLDCMotor( 7 );
 BLDCDriver3PWM driver = BLDCDriver3PWM(11, 10, 9, 8);
 
 // commander interface
 Commander command = Commander(Serial);
-void onTarget(char* cmd){ command.motion(&motor, cmd); }
-
 MagneticSensorI2C sensor = MagneticSensorI2C(AS5600_I2C);
 
 void doMotor(char* cmd) { command.motor(&motor, cmd); }
@@ -35,21 +36,22 @@ void setup() {
   motor.linkDriver(&driver);
 
   // set control loop to be used
-  motor.controller = MotionControlType::angle;
+  motor.controller = MotionControlType::torque;
 
   // controller configuration based on the control type 
   // velocity PI controller parameters
   // default P=0.5 I = 10
-  motor.PID_velocity.P = 0.1;
-  motor.PID_velocity.I = 0.05;
-  
+ /* motor.PID_velocity.P = 0.1;
+  motor.PID_velocity.I = 0;
+  motor.PID_velocity.D = 0;
+  */
   //default voltage_power_supply
   motor.voltage_limit = 12;
 
   // velocity low pass filtering
   // default 5ms - try different values to see what is the best. 
   // the lower the less filtered
-  motor.LPF_velocity.Tf = 0.01;
+  motor.LPF_velocity.Tf = 0.0;
 
   // angle P controller 
   // default P=20
@@ -65,7 +67,10 @@ void setup() {
   // align encoder and start FOC
   motor.initFOC();
 
-  command.add('M',doMotor,'motor');
+  // skip calibration
+  motor.sensor_direction = Direction::CW;
+
+  //command.add('M',doMotor,'motor');
   
 
   // monitoring port
@@ -82,31 +87,66 @@ float degToRad(float deg) {
   return deg * 2 * PI / 360;
 }
 
+float targetAngle;
+void setAngle(float targetAngle0) {
+  targetAngle = targetAngle0;
+}
+
+void updateTorque() {
+  float currentAngle = sensor.getAngle();
+
+  float maxError = 0.1;
+  float errorAngle = constrain(targetAngle - currentAngle, -maxError, maxError);
+  //Serial.println(errorAngle);
+  
+  motor.move(errorAngle * 8);
+}
+
+int getSeconds() {
+  return (float)millis() / 1000.0;
+}
+
+// seconds
+void seconds () {
+  int sec = getSeconds();
+  setAngle(degToRad(sec * 360 / 60));
+}
+
+// tick-tock
+void tick() {
+  float angle = 40 * cos(millis() / 1000. * PI);
+  Serial.println(angle); 
+  setAngle(degToRad(angle));
+}
+
+int maxProgram = 2;
+int switchTime = 5000; // ms
+
+int program = 1;
+float lastSwitchTime = millis();
+int getProgram() {
+  float now = millis();
+  if (now - lastSwitchTime > switchTime) {
+    program = (program + 1) % maxProgram;
+    lastSwitchTime = now;
+  }
+  return program;
+}
+
 float target = 0;
 void loop() {
-  // iterative FOC function
   motor.loopFOC();
-  
-  //command.run();
+  command.run();
 
-  int sec = (float)millis() / 1000.0;
-
-  if (sec % 2 == 0){
-    target = degToRad(10);
-  } else {
-    target = degToRad(-10);
+  switch (getProgram()) {
+    case 0:
+      seconds();
+      break;
+    case 1:
+      tick();
+      break;
   }
 
-  //target = degToRad((float)sec / 60 * 360);
-
-  Serial.print("angle: ");
-  Serial.print(radToDeg(sensor.getAngle()));
-  Serial.print("\t");
-  
-  Serial.print("target: ");
-  Serial.print(radToDeg(target));
-  Serial.print("\n");
-
+  updateTorque();
   //motor.monitor();
-  motor.move(target);
 }
